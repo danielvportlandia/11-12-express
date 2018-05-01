@@ -3,6 +3,8 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import logger from './logger';
+import loggerMiddleware from './logger-middlware';
+import errorMiddleware from './error-middleware';
 import userRoutes from '../route/user-router';
 
 const app = express();

@@ -55,14 +55,14 @@ describe('/api/users', () => {
       .send(UserToPost)
       .then(Promise.reject) // Vinicio - this is needed because we are testing for failures
       .catch((response) => {
-        // Vinicio - testing status code
         expect(response.status).toEqual(400);
       });
   });
+
   describe('GET /api/users', () => {
     test('should respond with 200 if there are no errors', () => {
-      let userToTest = null; //  Vinicio - we need to preserve the User because of scope rules
-      return createUserMock() // Vinicio - test only a GET request
+      let userToTest = null;
+      return createUserMock()
         .then((user) => {
           userToTest = user;
           return superagent.get(`${apiURL}/${user._id}`);
@@ -89,11 +89,23 @@ describe('/api/users', () => {
         expect(Array.isArray(response.body)).toBeTruthy();
       });
   });
-  test('should respond with 200 if item successfully removed.', () => {
 
-    return superagent.delete(`${apiURL}/${user._id}`)
-      .then((response) => {
-        expect(response.status).toEqual(204);
-      });
+  describe('DELETE /api/users', () => {
+    test('should respond with 204 if item was successfully removed.', () => {
+      return createUserMock()
+        .then((user) => {
+          return superagent.delete(`${apiURL}/${user._id}`);
+        })
+        .then((response) => {
+          expect(response.status).toEqual(204);
+        });
+    });
+    test('should respond with 404 if there is no user to be found', () => {
+      return superagent.delete(`${apiURL}/THisIsAnInvalidId`)
+        .then(Promise.reject)
+        .catch((response) => {
+          expect(response.status).toEqual(404);
+        });
+    });
   });
 });
