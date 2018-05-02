@@ -32,6 +32,7 @@
     "dotenv": "^5.0.1",
     "express": "^4.16.3",
     "faker": "^4.1.0",
+    "http-errors": "^1.6.3",
     "mongoose": "^5.0.16",
     "winston": "^3.0.0-rc4"
   }

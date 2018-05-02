@@ -1,65 +1,93 @@
-![cf](https://i.imgur.com/7v5ASc8.png) 11: Single Resource Express API
-======
+**Author**: Daniel Shelton
+**Version**: 1.0.2
 
-## Submission Instructions
-* Read this document entirely and estimate how long this assignment will take.
-* Work in a fork of this repository
-* Work in a branch on your fork
-* Protect your repository's `master` branch by activating `continuous-integration/travis-ci` status checks
-* Create a pull request from your `lab` + `<your name>` branch to your `master` branch
-* Open a pull request to this repository
-* Submit on canvas a question and observation,your original estimate, how long you spent, and a link to your pull request
+## Overview
+This is an application which performs CRUD operations via the Express framework to retreive, edit, add, and/or delete data from a MongoDB database consisting of user's names, city locations, and upperbody RPM stats.
 
+## Architecture
+The main point of entry of this application is the index.js file which transpiles the app by utilizing the babel library. This application also utilizes multiple NPM libraries and .travis.yml for its CI. The 'lib' directory contains all the helper modules such as the Node and LinkedList class constructors. The '__test__' directory contains the testing suite.
 
-## Learning Objectives
-* students will be able to create a single resource API using the express framework
-* students will be able to leverage 3rd party helper modules for debugging, logging, and handling errors
+## Paths
+GET ROUTE: retreive an user by their unique id.
 
-## Requirements
-For this assignment you will be building a RESTful HTTP server useing express.
+userRouter.get('/api/users/:id', (request, response, next) => {
+  return User.findById(request.params.id)
+    .then((user) => { // Vinicio - user found OR user not found, but the id looks good
+      if (!user) {
+        logger.log(logger.INFO, 'GET - responding with a 404 status code - (!user)');
+        return next(new HttpErrors(404, 'User not found, invalid id.'));
+      }
+      logger.log(logger.INFO, 'GET - responding with a 200 status code');
+      return response.json(user);
+    })
+    .catch(next);
+});
 
-### Configuration
-Configure the root of your repository with the following files and directories. Thoughfully name and organize any aditional configuration or module files.
-* **README.md** - contains documentation
-* **.env** - contains env variables **(should be git ignored)**
-* **.gitignore** - contains a [robust](http://gitignore.io) `.gitignore` file
-* **.eslintrc.json** - contains the course linter configuratoin
-* **.eslintignore** - contains the course linter ignore configuration
-* **package.json** - contains npm package config
-  * create a `test` script for running tests
-  * create `dbon` and `dboff` scripts for managing the mongo daemon
-* **db/** - contains mongodb files **(should be git ignored)**
-* **lib/** - contains module definitions
-* **model/** - contains module definitions
-* **route/** - contains module definitions
-* **\_\_test\_\_/** - contains test modules
+GET ROUTE: return all users in an array.
 
+userRouter.get('/api/users', (request, response, next) => {
+  return User.find()
+    .then((userList) => { // Vinicio - userList found OR userList not found, but the id looks good
+      if (!userList) {
+        logger.log(logger.INFO, 'GET - responding with a 404 status code - (!userList)');
+        return next(new HttpErrors(404, 'Collection not found.'));
+      }
+      logger.log(logger.INFO, 'GET - responding with a 200 status code');
+      return response.json(userList);
+    })
+    .catch(next);
+});
 
-#### Model
-In the model/ directory create a Model for a resource using Mongoose (that is different from the class lecture resource). The model must include 4 properties, two of which should be required.
+POST ROUTE: Adds a new user to the database if that user doesn't already exist.
 
-#### Server Endpoints
-Create the following routes for performing CRUD opperations on your resourcee
-* `POST /api/<resource-name>`
-  * pass data as stringifed JSON in the body of a **POST** request to create a new resource
-  * on success respond with a 200 status code and the created note
-  * on failure due to a bad request send a 400 status code
-* `GET /api/<resource-name>` and `GET /api/<resource-name>/:id`
-  * with no id in the query string it should respond with an array of all of your resources
-  * with an id in the query string it should respond with the details of a specifc resource (as JSON)
-    * if the id is not found respond with a 404
-* `DELETE /api/<resource-name>/:id`
-  * the route should delete a note with the given id
-  * on success this should return a 204 status code with no content in the body
-  * on failure due to lack of id in the query respond with a 400 status code
-  * on failure due to a resouce with that id not existing respond with a 404 status code
+userRouter.post('/api/users', jsonParser, (request, response, next) => {
+  if (!request.body.name || !request.body.location) {
+    logger.log(logger.INFO, 'Responding with a 400 error code');
+    return next(new HttpErrors(400, 'Name and location are required.'));
+  }
+  return new User(request.body).save()
+    .then((user) => {
+      logger.log(logger.INFO, 'POST - responding with a 200 status code');
+      return response.json(user);
+    })
+    .catch(next);
+});
 
-## Tests
-* Write tests to ensure the `/api/resource-name` endpoint responds as described for each condition below:
-* `GET`: test 404, it should respond with 'not found' for valid requests made with an id that was not found
-* `GET`: test 200, it should contain a response body for a request made with a valid id
-* `POST`: test 400, it should respond with 'bad request' if no request body was provided or the body was invalid
-* `POST`: test 200, it should respond with the body content for a post request with a valid body
+DELETE ROUTE: Removes a user from the database by their unique id.
 
-## Documentation
-In the README.md write documention for starting your server and how to make requests to each endpoint it provides. The documentaion should describe how the server would respond to valid and invalid requests.
+userRouter.delete('/api/users/:id', (request, response, next) => {
+  return User.findByIdAndRemove(request.params.id)
+    .then((user) => { // Vinicio - user found OR user not found, but the id looks good
+      if (!user) {
+        logger.log(logger.INFO, 'DELETE - responding with a 404 status code - (!user)');
+        return next(new HttpErrors(404, 'User not found, invalid id.'));
+      }
+      logger.log(logger.INFO, 'DELETE - responding with a 204 status code');
+      logger.log(logger.INFO, 'DELETE - user successfully removed');
+      return response.sendStatus(204);
+    })
+    .catch(next);
+});
+
+PUT ROUTE: updates a specified property of an existing user in the database.
+
+userRouter.put('/api/users/:id', jsonParser, (request, response, next) => {
+  // new means that mongoose will return the updated object after updating.
+  const options = { runValidators: true, new: true };
+  // findByIdAndUpdate() returns a Promise.
+  return User.findByIdAndUpdate(request.params.id, request.body, options)
+    .then((updateUser) => {
+      if (!updateUser) {
+        logger.log(logger.INFO, 'PUT - responding with a 404 status code - (!user)');
+        return next(new HttpErrors(404, 'User not found, invalid or missing id.'));
+      }
+      logger.log(logger.INFO, 'PUT - responding with a 200 status code.');
+      return response.json(updateUser);
+    })
+    .catch(next);
+});
+
+## Change Log
+
+05-01-2018 8:56am - GET, POST, DELETE routes established and tested.
+05-01-2018 9:30pm - PUT route established and tested, implemented new middleware and refactored.

@@ -7,8 +7,6 @@ import { startServer, stopServer } from '../lib/server';
 
 const apiURL = `http://localhost:${process.env.PORT}/api/users`;
 
-// Vinicio - the main reason to use mocks is the fact that we don't want to
-// write a test that relies on both a POST and a GET request
 const createUserMock = () => {
   return new User({
     name: faker.name.findName(),
@@ -18,12 +16,19 @@ const createUserMock = () => {
   }).save();
 };
 
+// const createManyUserMocks = (howManyNotes) => {
+//   // Promise.all takes an array of promises.
+//   return Promise.all(new Array(howManyNotes))
+//     .fill(0)
+//     .map(() => createUserMock());
+// };
+
 describe('/api/users', () => {
   // I know that I'll give a POST ROUTE
   // The post route will be able to insert a new user to my application
   beforeAll(startServer); // Vinicio - we don't use startServer() because we need a function
   afterAll(stopServer);
-  // afterEach(() => User.remove({}));
+  afterEach(() => User.remove({}));
   test('POST - It should respond with a 200 status ', () => {
     const userToPost = {
       name: faker.name.findName(),
@@ -105,6 +110,37 @@ describe('/api/users', () => {
         .then(Promise.reject)
         .catch((response) => {
           expect(response.status).toEqual(404);
+        });
+    });
+  });
+
+  describe('PUT /api/users', () => {
+    test('PUT - should update a user and return a 200 status code.  ', () => {
+      let userToUpdate = null;
+      return createUserMock()
+        .then((userMock) => {
+          userToUpdate = userMock;
+          return superagent.put(`${apiURL}/${userMock._id}`)
+            .send({ name: 'John Doe' });
+        })
+        .then((response) => {
+          expect(response.status).toEqual(200);
+          expect(response.body.name).toEqual('John Doe');
+          expect(response.body.location).toEqual(userToUpdate.location);
+          expect(response.body.bicepsRPM).toEqual(userToUpdate.bicepsRPM);
+          expect(response.body.tricepsRPM).toEqual(userToUpdate.tricepsRPM);
+          expect(response.body._id).toEqual(userToUpdate._id.toString());
+          // Mongo generated id's are objects, not strings/numbers thus toString() is required.
+        });
+    });
+    test('PUT - should respond with a 404 if user not found.', () => {
+      return createUserMock()
+        .then(() => {
+          return superagent.put(`${apiURL}/invalidID`)
+            .send({ name: 'John Doe' });
+        })
+        .catch((error) => {
+          expect(error.status).toEqual(404);
         });
     });
   });
